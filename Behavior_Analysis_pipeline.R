@@ -29,3 +29,5 @@ hist(x = data_beha$CarSpeed, xlab = 'Car Speed', breaks = 2, main = 'Distributio
 hist(x = data_beha$StopPos, xlab = 'Stop Position', main = 'Distribution of Subjects\' Stop Position')
 hist(x = data_beha$RelativeErrorDis, xlab = 'Error Distance', main = 'Distribution of Error Distance')
 table(data_beha$Insinght)
+
+# 
