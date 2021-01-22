@@ -30,4 +30,24 @@ hist(x = data_beha$StopPos, xlab = 'Stop Position', main = 'Distribution of Subj
 hist(x = data_beha$RelativeErrorDis, xlab = 'Error Distance', main = 'Distribution of Error Distance')
 table(data_beha$Insinght)
 
-# 
+# analyze the error distace in different runss ----
+library(tidyverse)
+library(ggplot2)
+p.error.run <- ggstatsplot::ggbetweenstats(
+  data = data_beha %>%
+    group_by(subject, run) %>%
+    summarise_each(funs(mean)),
+  x = run,
+  y = RelativeErrorDis
+)
+
+# analyze the error distance in Hit/Miss trials ----
+library(tidyverse)
+library(ggplot2)
+ggstatsplot::ggbetweenstats(
+  data = data_beha %>%
+    group_by(subject, Insinght) %>%
+    summarize_each(funs(mean)),
+  x = Insinght,
+  y = RelativeErrorDis
+)
