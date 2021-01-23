@@ -29,8 +29,9 @@ hist(x = data_beha$CarSpeed, xlab = 'Car Speed', breaks = 2, main = 'Distributio
 hist(x = data_beha$StopPos, xlab = 'Stop Position', main = 'Distribution of Subjects\' Stop Position')
 hist(x = data_beha$RelativeErrorDis, xlab = 'Error Distance', main = 'Distribution of Error Distance')
 table(data_beha$Insinght)
+data_beha[, "RealError"] <- abs(data_beha$RelativeErrorDis)
 
-# analyze the error distace in different runss ----
+# analyze the error distace in different runs ----
 library(tidyverse)
 library(ggplot2)
 p.error.run <- ggstatsplot::ggbetweenstats(
@@ -38,10 +39,12 @@ p.error.run <- ggstatsplot::ggbetweenstats(
     group_by(subject, run) %>%
     summarise_each(funs(mean)),
   x = run,
-  y = RelativeErrorDis
+  y = RealError
 )
 
 # analyze the error distance in Hit/Miss trials ----
+## actually, it is meaningless to test this, because the Hit trials is literally 
+## more accuracy than Miss trials
 library(tidyverse)
 library(ggplot2)
 ggstatsplot::ggbetweenstats(
@@ -49,5 +52,34 @@ ggstatsplot::ggbetweenstats(
     group_by(subject, Insinght) %>%
     summarize_each(funs(mean)),
   x = Insinght,
-  y = RelativeErrorDis
+  y = RealError
 )
+
+# analyze the error distance in different conditions ---
+library(tidyverse)
+library(ggplot2)
+p.error.condition <- ggstatsplot::ggbetweenstats(
+  data = data_beha %>%
+    group_by(subject, Condition) %>%
+    summarise_each(funs(mean)),
+  x = Condition,
+  y = RealError,
+  output =  "subtitle"
+)
+
+# the correlation of target position and Error Distance ----
+library(tidyverse)
+library(ggplot2)
+test <- ggstatsplot::ggscatterstats(
+  data = data_beha,
+  x = TargetPos,
+  y = RealError,
+  output ="dataframe"
+)
+ggstatsplot::grouped_ggscatterstats(
+  data = data_beha,
+  x = TargetPos,
+  y = RealError,
+  grouping.var = subject
+)
+
