@@ -1,7 +1,7 @@
 # Global Environments
 dataDir <- 'raw_data/'
-
-# load data ----
+scaleDataFile <- 'PickUpSam_postScanning_Questionnaires.csv'
+.# load data ----
 library(data.table)
 data_raw_all <- data.table()
 for (fileInd in list.files(dataDir)) {
@@ -30,6 +30,35 @@ hist(x = data_beha$StopPos, xlab = 'Stop Position', main = 'Distribution of Subj
 hist(x = data_beha$RelativeErrorDis, xlab = 'Error Distance', main = 'Distribution of Error Distance')
 table(data_beha$Insinght)
 data_beha[, "RealError"] <- abs(data_beha$RelativeErrorDis)
+
+# reshape data of questionnaires ----
+library(data.table)
+library(tidyverse)
+data_ques <- data.table(readr::read_csv(scaleDataFile, col_names = T))
+## reverse the score of SOSBS
+data_ques$SOSBS2 <-  8 - data_ques$SOSBS2
+data_ques$SOSBS6 <-  8 - data_ques$SOSBS6
+data_ques$SOSBS8 <-  8 - data_ques$SOSBS8
+data_ques$SOSBS10 <-  8 - data_ques$SOSBS10
+data_ques$SOSBS11 <-  8 - data_ques$SOSBS11
+data_ques$SOSBS13 <-  8 - data_ques$SOSBS13
+data_ques$SOSBS15 <-  8 - data_ques$SOSBS15
+## calculate the total score of SOSBS and GRiPS
+data_ques %<>% 
+  select(starts_with('SOS')) %>%
+  mutate(test, SOSBS_total=apply(., 1, sum))
+data_ques %<>% 
+  select(starts_with('GRi')) %>%
+  mutate(test, GRiPS_total=apply(., 1, sum))
+## combine behavoral and questionnarie data
+data_total <- data_ques %>%
+  select(subject, gender, SOSBS_total, GRiPS_total) %>%
+  left_join(data_beha, ., by='subject')
+##############################################
+#
+# Universal Analysis
+#
+##############################################
 
 # analyze the error distace in different runs ----
 library(tidyverse)
@@ -70,16 +99,40 @@ p.error.condition <- ggstatsplot::ggbetweenstats(
 # the correlation of target position and Error Distance ----
 library(tidyverse)
 library(ggplot2)
-test <- ggstatsplot::ggscatterstats(
+ggstatsplot::ggscatterstats(
   data = data_beha,
   x = TargetPos,
-  y = RealError,
-  output ="dataframe"
+  y = RealError
 )
-ggstatsplot::grouped_ggscatterstats(
+# ggstatsplot::grouped_ggscatterstats(
+#   data = data_beha,
+#   x = TargetPos,
+#   y = RealError,
+#   grouping.var = subject,
+#   output = "dataframe"
+# )
+## T test to exaim the statistical significant of correlationship 
+data_beha %>%
+  select(subject, TargetPos, RealError) %>%
+  group_by(subject) %>%
+  summarise(corr_data=cor(TargetPos, RealError)) %>%
+  .[,2] %>%
+  t.test()
+
+# the correlation of car speed and Error distance ----
+library(tidyverse)
+library(ggplot2)
+ggstatsplot::ggscatterstats(
   data = data_beha,
-  x = TargetPos,
-  y = RealError,
-  grouping.var = subject
+  x = CarSpeed,
+  y = RealError
 )
+## divide the car speed into 2 conditions (fast and slow)
+ggstatsplot::ggbetweenstats(
+  data = data_beha[, speed := ifelse(CarSpeed>7, 'fast', 'slow')],
+  x = speed,
+  y = RealError
+)
+ 
+
 
