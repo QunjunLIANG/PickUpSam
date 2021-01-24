@@ -54,22 +54,63 @@ data_ques %<>%
 data_total <- data_ques %>%
   select(subject, gender, SOSBS_total, GRiPS_total) %>%
   left_join(data_beha, ., by='subject')
+
 ##############################################
 #
 # Universal Analysis
 #
 ##############################################
 
-# analyze the error distace in different runs ----
+# the correlation of SOSBS and Error Distance ----
+ggstatsplot::ggscatterstats(
+  data = data_total %>%
+    group_by(subject) %>%
+    summarise_each(funs(mean)),
+  x = SOSBS_total,
+  y = RealError
+)
+
+# the correlation of GRiPs and Error Distance ----
+ggstatsplot::ggscatterstats(
+  data = data_total %>%
+    group_by(subject) %>%
+    summarise_each(funs(mean)),
+  x = GRiPS_total,
+  y = RealError
+)
+ggstatsplot::ggscatterstats(
+  data = data_total %>%
+    group_by(subject) %>%
+    summarise_each(funs(mean)),
+  x = GRiPS_total,
+  y = RelativeErrorDis
+)
+
+# analyze the error distance in different runs ----
 library(tidyverse)
 library(ggplot2)
-p.error.run <- ggstatsplot::ggbetweenstats(
+ggstatsplot::ggbetweenstats(
   data = data_beha %>%
     group_by(subject, run) %>%
     summarise_each(funs(mean)),
   x = run,
   y = RealError
 )
+
+# analyze the error distance in different genders ----
+library(tidyverse)
+library(ggplot2)
+ggstatsplot::ggbetweenstats(
+  data = data_total,
+  x = gender,
+  y = RealError
+)
+## t test
+data_beha %>%
+  group_by(subject) %>%
+  summarise_each(funs(mean)) %>%
+  mutate(sex=data_ques$gender) %>%
+  t.test(RealError ~ sex, .)
 
 # analyze the error distance in Hit/Miss trials ----
 ## actually, it is meaningless to test this, because the Hit trials is literally 
@@ -87,13 +128,12 @@ ggstatsplot::ggbetweenstats(
 # analyze the error distance in different conditions ---
 library(tidyverse)
 library(ggplot2)
-p.error.condition <- ggstatsplot::ggbetweenstats(
+ggstatsplot::ggbetweenstats(
   data = data_beha %>%
     group_by(subject, Condition) %>%
     summarise_each(funs(mean)),
   x = Condition,
-  y = RealError,
-  output =  "subtitle"
+  y = RealError
 )
 
 # the correlation of target position and Error Distance ----
@@ -127,12 +167,19 @@ ggstatsplot::ggscatterstats(
   x = CarSpeed,
   y = RealError
 )
+## T test to exaim the statistical significant of correlationship 
+data_beha %>%
+  select(subject, CarSpeed, RealError) %>%
+  group_by(subject) %>%
+  summarise(corr_data=cor(CarSpeed, RealError)) %>%
+  .[,2] %>%
+  t.test()
 ## divide the car speed into 2 conditions (fast and slow)
 ggstatsplot::ggbetweenstats(
   data = data_beha[, speed := ifelse(CarSpeed>7, 'fast', 'slow')],
   x = speed,
   y = RealError
 )
- 
+
 
 
