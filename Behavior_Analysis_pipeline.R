@@ -144,13 +144,6 @@ ggstatsplot::ggscatterstats(
   x = TargetPos,
   y = RealError
 )
-# ggstatsplot::grouped_ggscatterstats(
-#   data = data_beha,
-#   x = TargetPos,
-#   y = RealError,
-#   grouping.var = subject,
-#   output = "dataframe"
-# )
 ## T test to exaim the statistical significant of correlationship 
 data_beha %>%
   select(subject, TargetPos, RealError) %>%
@@ -181,5 +174,34 @@ ggstatsplot::ggbetweenstats(
   y = RealError
 )
 
+###############################################
+#
+# Linear Mixed-effect Model
+#
+###############################################
 
+library(lmerTest)
+library(bruceR)
+## first model 
+Model.full <- lmer(data = data_total,
+                   formula = RealError ~ TargetPos*CarSpeed*Condition
+                   + (1 | subject) + (1 |run) + (1|Trial),
+                   control = lmerControl('bobyqa'))
+bruceR::HLM_summary(Model.full)
+## third model
+Model.alt1 <- lmer(data = data_total,
+                   formula = RealError ~ TargetPos*CarSpeed*Condition + 
+                     (1 | subject) + (1|run),
+                   control = lmerControl('bobyqa'))
+Model.alt2 <- lmer(data = data_total,
+                   formula = RealError ~ TargetPos*CarSpeed*Condition +
+                     (1|subject))
+Model.alt3 <- lmer(data = data_total,
+                   formula = RealError ~ TargetPos + CarSpeed + Condition +
+                     (1 | subject) + (1 | run) + (1 | Trial))
 
+## model comparison
+bruceR::model_summary(model_list = list(Model.full, Model.alt1, Model.alt2,
+                                        Model.alt3))
+anova(Model.alt1, Model.alt2,
+      Model.alt3, Model.full)
