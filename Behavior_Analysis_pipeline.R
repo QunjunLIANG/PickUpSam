@@ -17,7 +17,7 @@ for (fileInd in list.files(dataDir)) {
 }
 head(data_raw_all)
 
-# reshape data for behaviorial analysis ----
+# reshape data for behavioral analysis ----
 data_beha <- data_raw_all[Stage == 'Navigate']
 head(data_beha, n = 20)
 ## summarize behavior data
@@ -46,14 +46,17 @@ data_ques$SOSBS15 <-  8 - data_ques$SOSBS15
 ## calculate the total score of SOSBS and GRiPS
 data_ques %<>% 
   select(starts_with('SOS')) %>%
-  mutate(test, SOSBS_total=apply(., 1, sum))
+  mutate(data_ques, SOSBS_total=apply(., 1, sum))
 data_ques %<>% 
   select(starts_with('GRi')) %>%
-  mutate(test, GRiPS_total=apply(., 1, sum))
+  mutate(data_ques, GRiPS_total=apply(., 1, sum))
 ## combine behavoral and questionnarie data
 data_total <- data_ques %>%
   select(subject, gender, SOSBS_total, GRiPS_total) %>%
   left_join(data_beha, ., by='subject')
+## actually, the target position and carspeed is divided into conditions
+data_total[, Speed := ifelse(CarSpeed>7, 'fast', 'slow')]
+data_total[, Destination := ifelse(TargetPos>50, "far", "near")]
 
 ##############################################
 #
@@ -112,19 +115,6 @@ data_beha %>%
   mutate(sex=data_ques$gender) %>%
   t.test(RealError ~ sex, .)
 
-# analyze the error distance in Hit/Miss trials ----
-## actually, it is meaningless to test this, because the Hit trials is literally 
-## more accuracy than Miss trials
-library(tidyverse)
-library(ggplot2)
-ggstatsplot::ggbetweenstats(
-  data = data_beha %>%
-    group_by(subject, Insinght) %>%
-    summarize_each(funs(mean)),
-  x = Insinght,
-  y = RealError
-)
-
 # analyze the error distance in different conditions ---
 library(tidyverse)
 library(ggplot2)
@@ -136,7 +126,7 @@ ggstatsplot::ggbetweenstats(
   y = RealError
 )
 
-# the correlation of target position and Error Distance ----
+# the correlation of target position and Error Distance in continuous type  ----
 library(tidyverse)
 library(ggplot2)
 ggstatsplot::ggscatterstats(
@@ -144,7 +134,7 @@ ggstatsplot::ggscatterstats(
   x = TargetPos,
   y = RealError
 )
-## T test to exaim the statistical significant of correlationship 
+## T test to exam the statistical significant of correlation
 data_beha %>%
   select(subject, TargetPos, RealError) %>%
   group_by(subject) %>%
@@ -152,7 +142,7 @@ data_beha %>%
   .[,2] %>%
   t.test()
 
-# the correlation of car speed and Error distance ----
+# the correlation of car speed and Error distance in continuous type ----
 library(tidyverse)
 library(ggplot2)
 ggstatsplot::ggscatterstats(
@@ -160,48 +150,106 @@ ggstatsplot::ggscatterstats(
   x = CarSpeed,
   y = RealError
 )
-## T test to exaim the statistical significant of correlationship 
+## T test to exam the statistical significant of correlation
 data_beha %>%
   select(subject, CarSpeed, RealError) %>%
   group_by(subject) %>%
   summarise(corr_data=cor(CarSpeed, RealError)) %>%
   .[,2] %>%
   t.test()
-## divide the car speed into 2 conditions (fast and slow)
+
+# the difference of Error Distance in various Speed conditions ----
+library(tidyverse)
+library(ggplot2)
 ggstatsplot::ggbetweenstats(
-  data = data_beha[, speed := ifelse(CarSpeed>7, 'fast', 'slow')],
-  x = speed,
+  data = data_total %>%
+    group_by(subject, Speed) %>%
+    summarise_each(funs(mean)),
+  x = Speed,
+  y = RealError
+)
+
+# the difference of Error Distance in various Target conditions ----
+library(tidyverse)
+library(ggplot2)
+ggstatsplot::ggbetweenstats(
+  data = data_total %>%
+    group_by(subject, Destination) %>%
+    summarise_each(funs(mean)),
+  x = Destination,
   y = RealError
 )
 
 ###############################################
 #
-# Linear Mixed-effect Model
+# Linear Mixed-effect Model - in Speed and Destination
+#
+###############################################
+library(lmerTest)
+library(bruceR)
+# build the alternative models ----
+model.alt1 <- lmer(
+  data = data_total,
+  formula = RealError ~ Condition + Speed + Destination +
+    (1 + Speed|subject) + (1|run) + (1|Trial),
+  control = lmerControl('bobyqa')
+)
+model.alt2 <- lmer(
+  data = data_total,
+  formula = RealError ~ Condition + Speed + Destination +
+    (1 + Speed|subject) + (1|run),
+  control = lmerControl('bobyqa')
+)
+model.alt3 <- lmer(
+  data = data_total,
+  formula = RealError ~ Condition + Speed + Destination +
+    (1 + Speed|subject),
+  control = lmerControl('bobyqa')
+)
+model.alt4 <- lmer(
+  data = data_total,
+  formula = RealError ~ Condition*Speed*Destination +
+    (1 + Speed|subject),
+  control = lmerControl('bobyqa')
+)
+
+## model comparison 
+anova(model.alt1, model.alt2, model.alt3, model.alt4)
+bruceR::model_summary(
+  model_list = list(model.alt1, model.alt2, model.alt3, model.alt4))
+###############################################
+#
+# Linear Mixed-effect Model old - in CarSpeed and TargetPos
 #
 ###############################################
 
 library(lmerTest)
 library(bruceR)
-## first model 
-Model.full <- lmer(data = data_total,
-                   formula = RealError ~ TargetPos*CarSpeed*Condition
-                   + (1 | subject) + (1 |run) + (1|Trial),
-                   control = lmerControl('bobyqa'))
-bruceR::HLM_summary(Model.full)
-## third model
+# model setting ----
 Model.alt1 <- lmer(data = data_total,
                    formula = RealError ~ TargetPos*CarSpeed*Condition + 
                      (1 | subject) + (1|run),
                    control = lmerControl('bobyqa'))
 Model.alt2 <- lmer(data = data_total,
                    formula = RealError ~ TargetPos*CarSpeed*Condition +
-                     (1|subject))
+                     (1|subject),
+                   control = lmerControl('bobyqa'))
 Model.alt3 <- lmer(data = data_total,
                    formula = RealError ~ TargetPos + CarSpeed + Condition +
-                     (1 | subject) + (1 | run) + (1 | Trial))
+                     (1 | subject) + (1 | run) + (1 | Trial),
+                   control = lmerControl('bobyqa'))
+Model.alt4 <- lmer(data = data_total,
+                   formula = RealError ~ TargetPos*CarSpeed*Condition
+                   + (1 | subject) + (1 |run) + (1|Trial),
+                   control = lmerControl('bobyqa'))
 
 ## model comparison
-bruceR::model_summary(model_list = list(Model.full, Model.alt1, Model.alt2,
-                                        Model.alt3))
+bruceR::model_summary(model_list = list(Model.alt1, Model.alt2,
+                                        Model.alt3, Model.alt4))
 anova(Model.alt1, Model.alt2,
-      Model.alt3, Model.full)
+      Model.alt3, Model.alt4)
+
+bruceR::model_summary(model_list = list(Model.alt1, Model.alt2,
+                                        Model.alt3, Model.alt4,
+                                        model.alt1, model.alt2,
+                                        model.alt3, model.alt4))
