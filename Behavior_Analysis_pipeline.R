@@ -99,6 +99,13 @@ ggstatsplot::ggbetweenstats(
   x = run,
   y = RealError
 )
+ggstatsplot::ggwithinstats(
+  data = data_beha %>%
+    group_by(subject, run) %>%
+    summarise_each(funs(mean)),
+  x = run,
+  y = RealError
+)
 
 # analyze the error distance in different genders ----
 library(tidyverse)
