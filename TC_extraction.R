@@ -1,3 +1,23 @@
+# initial the function of demean 
+DeMean <- function(rawVect) {
+  outVect <- rawVect - mean(rawVect)
+  return(outVect)
+}
+ExtractTC <- function(rawData, stageName, modulator) {
+  if (modulator==1) {
+    outTC <- rawData %>%
+      filter(Stage==stageName) %>%
+      select(onset, duration) %>%
+      mutate(thirdCol=modulator)
+  }else{
+    outTC <- rawData %>%
+      filter(Stage==stageName) %>%
+      select(onset, duration, modulator) %>%
+      mutate(thirdCol=DeMean(modulator)) %>%
+      select(onset, duration, thirdCol)
+  }
+  
+}
 # load data
 library(tidyverse)
 library(data.table)
@@ -16,7 +36,7 @@ data.raw[,'onset'] <- map_dbl(data.raw$StartTime,
 data.raw[,'duration'] <- map_dbl(data.raw$EndTime,
                                  ~difftime(.x, data.raw$StartTime[1],
                                            units = 'secs')) %>%
-  map2_dbl(., data.raw$onset, ~.x-.y)
+                              map2_dbl(., data.raw$onset, ~.x-.y)
 
 intervalTC <- data.raw %>%
   filter(Stage=="Interval") %>%
@@ -54,6 +74,17 @@ navigate_PI_TC_speed <- data.raw %>%
 navigate_LP1_TC_speed <- data.raw %>%
   filter(Stage=="Navigate", Condition==1) %>%
   select(onset, duration, CarSpeed)
-navigate_LP2_TC <- data.raw %>%
+navigate_LP2_TC_speed <- data.raw %>%
   filter(Stage=="Navigate", Condition==2) %>%
   select(onset, duration, CarSpeed)
+navigate_PI_TC_dis <- data.raw %>%
+  filter(Stage=="Navigate", Condition==0) %>%
+  select(onset, duration, TargetPos)
+navigate_LP1_TC_dis <- data.raw %>%
+  filter(Stage=="Navigate", Condition==1) %>%
+  select(onset, duration, TargetPos)
+navigate_LP2_TC_dis <- data.raw %>%
+  filter(Stage=="Navigate", Condition==2) %>%
+  select(onset, duration, TargetPos) %>%
+  mutate(thirdCol=DeMean(TargetPos)) %>%
+  select(onset, duration, thirdCol)
