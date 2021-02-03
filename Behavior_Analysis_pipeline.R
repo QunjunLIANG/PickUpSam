@@ -1,7 +1,7 @@
 # Global Environments
 dataDir <- 'raw_data/'
 scaleDataFile <- 'PickUpSam_postScanning_Questionnaires.csv'
-.# load data ----
+# load data ----
 library(data.table)
 data_raw_all <- data.table()
 for (fileInd in list.files(dataDir)) {
